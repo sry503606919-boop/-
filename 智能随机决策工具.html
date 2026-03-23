@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>智能随机决策工具 Ultimate</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: "Segoe UI", sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    text-align: center;
+}
+
+.dark {
+    background: #121212;
+}
+
+.container {
+    margin-top: 30px;
+}
+
+input {
+    padding: 10px;
+    width: 260px;
+    border-radius: 10px;
+    border: none;
+}
+
+button {
+    padding: 10px 15px;
+    border-radius: 10px;
+    border: none;
+    margin: 5px;
+    cursor: pointer;
+    background: #ff6b81;
+    color: white;
+    font-weight: bold;
+}
+
+canvas {
+    margin-top: 20px;
+}
+
+#pointer {
+    font-size: 30px;
+    margin-top: 10px;
+}
+
+#result {
+    font-size: 26px;
+    margin-top: 20px;
+    font-weight: bold;
+}
+
+#history {
+    margin-top: 20px;
+    max-height: 120px;
+    overflow-y: auto;
+}
+</style>
+
+</head>
+
+<body>
+
+<button onclick="toggleDark()">🌙</button>
+
+<div class="container">
+    <h1 id="title">🎯 智能随机决策工具 Ultimate</h1>
+
+    <input id="input" placeholder="选项用逗号分隔">
+    <br>
+
+    <button onclick="drawWheel()">生成转盘</button>
+    <button onclick="spin()">开始旋转</button>
+    <button onclick="clearHistory()">清空记录</button>
+
+    <div id="pointer">🔻</div>
+
+    <canvas id="wheel" width="300" height="300"></canvas>
+
+    <div id="result"></div>
+
+    <div id="history"></div>
+
+    <br>
+    <button onclick="setLang('zh')">中文</button>
+    <button onclick="setLang('en')">EN</button>
+    <button onclick="setLang('ko')">한국어</button>
+</div>
+
+<audio id="tick" src="https://www.soundjay.com/button/sounds/button-16.mp3"></audio>
+
+<script>
+let options = [];
+let angle = 0;
+let speed = 0;
+let spinning = false;
+let historyData = JSON.parse(localStorage.getItem("history")) || [];
+
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+
+function drawWheel() {
+    let input = document.getElementById("input").value;
+    options = input.split(",").map(i => i.trim()).filter(i => i);
+
+    if (options.length === 0) return alert("请输入选项");
+
+    let arc = Math.PI * 2 / options.length;
+
+    ctx.clearRect(0,0,300,300);
+
+    for (let i = 0; i < options.length; i++) {
+        let ang = angle + i * arc;
+        ctx.fillStyle = `hsl(${i*360/options.length},70%,60%)`;
+
+        ctx.beginPath();
+        ctx.moveTo(150,150);
+        ctx.arc(150,150,150,ang,ang+arc);
+        ctx.fill();
+
+        ctx.save();
+        ctx.fillStyle="#fff";
+        ctx.translate(150,150);
+        ctx.rotate(ang + arc/2);
+        ctx.fillText(options[i],80,5);
+        ctx.restore();
+    }
+}
+
+function spin() {
+    if (spinning || options.length === 0) return;
+
+    spinning = true;
+    speed = Math.random()*0.3 + 0.3;
+
+    requestAnimationFrame(rotate);
+}
+
+function rotate() {
+    if (!spinning) return;
+
+    angle += speed;
+    speed *= 0.97;
+
+    document.getElementById("tick").play();
+
+    drawWheel();
+
+    if (speed < 0.002) {
+        spinning = false;
+        showResult();
+    } else {
+        requestAnimationFrame(rotate);
+    }
+}
+
+function showResult() {
+    let arc = Math.PI * 2 / options.length;
+    let index = Math.floor((2*Math.PI - angle % (2*Math.PI)) / arc) % options.length;
+
+    let result = options[index];
+    document.getElementById("result").innerText = "👉 " + result;
+
+    historyData.unshift(result);
+    localStorage.setItem("history", JSON.stringify(historyData));
+    renderHistory();
+}
+
+function renderHistory() {
+    let div = document.getElementById("history");
+    div.innerHTML = historyData.map(i => `<div>${i}</div>`).join("");
+}
+
+function clearHistory() {
+    historyData = [];
+    localStorage.removeItem("history");
+    renderHistory();
+}
+
+function toggleDark() {
+    document.body.classList.toggle("dark");
+}
+
+function setLang(lang) {
+    const title = document.getElementById("title");
+
+    if(lang==="zh") title.innerText="🎯 智能随机决策工具";
+    if(lang==="en") title.innerText="🎯 Smart Random Picker";
+    if(lang==="ko") title.innerText="🎯 랜덤 선택 도구";
+}
+
+renderHistory();
+</script>
+
+</body>
+</html>
